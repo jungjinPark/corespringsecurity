@@ -1,5 +1,6 @@
 package com.example.corespringsecurity.security.config;
 
+import com.example.corespringsecurity.security.filter.AjaxLoginProcessingFilter;
 import com.example.corespringsecurity.security.handler.CustomAccessDeniedHandler;
 import com.example.corespringsecurity.security.provider.CustomAuthenticationProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationDetailsSource;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -51,6 +55,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+    @Override
     public void configure(WebSecurity web) throws Exception {
         web.ignoring().antMatchers(ignoredMatcherPattern);
     }
@@ -59,10 +68,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http
                 .authorizeRequests()
-                .antMatchers("/", "/login/**", "/user/register", "/error").permitAll()
+                .antMatchers("/", "/login/**", "/user/register", "/error", "/api/login").permitAll()
                 .antMatchers("/user/**").hasRole("USER")
                 .antMatchers("/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated();
+                .anyRequest().authenticated()
+        ;
+
         http
                 .formLogin()
                 .loginPage("/login")
@@ -71,11 +82,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .defaultSuccessUrl("/")
                 .successHandler(customAuthenticationSuccessHandler) // 로그인 성공 후 추가 프로세스 처리
                 .failureHandler(customAuthenticationFailureHandler) // 로그인 실패 후 추가 프로세스 처리
-                .permitAll();
+                .permitAll()
+        ;
+
         http
                 .exceptionHandling()
+                .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+                .accessDeniedPage("/denied")
                 .accessDeniedHandler(accessDeniedHandler()) // 접근제한 예외처리
         ;
+
+        http
+                .addFilterBefore(ajaxLoginProcessingFilter(), UsernamePasswordAuthenticationFilter.class);
+
+        http
+                .csrf().disable();
     }
 
     @Bean
@@ -94,5 +115,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         ((CustomAccessDeniedHandler) accessDeniedHandler).setErrorPage("/denied");
 
         return accessDeniedHandler;
+    }
+
+    @Bean
+    public AjaxLoginProcessingFilter ajaxLoginProcessingFilter() throws Exception {
+        AjaxLoginProcessingFilter ajaxLoginProcessingFilter = new AjaxLoginProcessingFilter();
+        ajaxLoginProcessingFilter.setAuthenticationManager(authenticationManagerBean());
+
+        return ajaxLoginProcessingFilter;
     }
 }
