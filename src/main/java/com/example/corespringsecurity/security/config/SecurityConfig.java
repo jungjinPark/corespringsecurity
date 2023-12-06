@@ -85,8 +85,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .accessDeniedPage("/denied")
                 .accessDeniedHandler(accessDeniedHandler()) // 접근제한 예외처리
         ;
-
-
     }
 
     @Bean

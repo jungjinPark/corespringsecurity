@@ -2,8 +2,10 @@ package com.example.corespringsecurity.security.filter;
 
 import com.example.corespringsecurity.domain.dto.AccountDto;
 import com.example.corespringsecurity.security.token.AjaxAuthenticationToken;
+import com.example.corespringsecurity.util.WebUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
@@ -27,7 +29,7 @@ public class AjaxLoginProcessingFilter extends AbstractAuthenticationProcessingF
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
 
-        if(!isAjax(request)) {
+        if (!HttpMethod.POST.name().equals(request.getMethod()) || !WebUtil.isAjax(request)) {
             throw new IllegalStateException("Authentication is not supported");
         }
 
@@ -41,11 +43,7 @@ public class AjaxLoginProcessingFilter extends AbstractAuthenticationProcessingF
         return getAuthenticationManager().authenticate(ajaxAuthenticationToken);
     }
 
-    private boolean isAjax(HttpServletRequest request) {
-        if("XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
-            return true;
-        } else {
-            return false;
-        }
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 }
